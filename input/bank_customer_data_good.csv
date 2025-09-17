@@ -1,0 +1,3 @@
+CustomerID,FirstName,LastName,Email,PhoneNumber,DateOfBirth,AccountOpenDate,LastTransactionDate,AccountType,CreditScore,LoanAmount,LoanStatus,AccountBalance,Street,City,State,Zip
+1001,Alice,Smith,alice.smith@example.com,555-123-4567,5/15/1975,1/20/2010,8/20/2025,Checking,720,15000,Approved,12500,123 Main St,Springfield,IL,62704
+1002,Bob,Johnson,bob.j@example.com,5551234568,11/22/1970,3/10/2015,7/10/2025,Savings,680,5000,Approved,3000,456 Oak Ave,Shelbyville,KY,40065

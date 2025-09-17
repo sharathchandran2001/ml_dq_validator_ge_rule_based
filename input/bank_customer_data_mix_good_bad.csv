@@ -1,0 +1,18 @@
+CustomerID,FirstName,LastName,Email,PhoneNumber,DateOfBirth,AccountOpenDate,LastTransactionDate,AccountType,CreditScore,LoanAmount,LoanStatus,AccountBalance,Street,City,State,Zip
+1001,Alice,Smith,alice.smith@example.com,555-123-4567,1985-05-15,2010-01-20,2025-08-20,Checking,720,15000,Approved,12500,123 Main St,Springfield,IL,62704
+1002,Bob,Johnson,bob.j@example.com,5551234568,1990-11-22,2015-03-10,2025-07-10,Savings,680,5000,Approved,3000,456 Oak Ave,Shelbyville,KY,40065
+1003,Charlie,Brown,charlie.brown@invalid,1234567,1970-01-01,2005-06-01,2025-08-01,Loan,450,25000,Approved,500,789 Pine Rd,Capital City,NY,12201
+1004,Diana,Prince,diana@example.com,N/A,1995-07-04,2020-09-01,2025-06-15,CreditCard,780,2000,Approved,2500,101 Gold St,Metropolis,DE,19901
+1005,Eve,Adams,,555-987-6543,1980-03-03,2012-04-05,2025-05-25,Checking,650,0,Declined,8000,202 Silver Blvd,Gotham,NJ,07001
+1006,Frank,White,frank.w@example.com,555-111-2222,2010-02-28,2022-10-10,2025-03-01,Savings,860,1000,Pending,1500,303 Bronze Ln,Central City,MO,65101
+1007,Grace,Green,grace.g@test.com,555-333-4444,1965-09-10,2008-12-01,2020-01-01,Checking,700,7500,Approved,9000,404 Iron Way,Star City,GA,30303
+1008,Harry,Black,harry.b@mail.org,abc-123-xyz,1950-04-20,2000-05-05,2025-08-25,Loan,620,-5000,Approved,1000000000,505 Copper Dr,Coast City,CA,90210
+1009,Ivy,King,ivy.k@domain.com,555-777-8888,2030-01-01,2023-01-01,2024-01-01,Checking,690,3000,Approved,4000,606 Steel Ave,Bludhaven,MD,20740
+1010,Jack,Queen,jack.q@service.co,555-000-9999,1988-06-06,2018-02-01,2017-01-01,Savings,710,10000,Approved,7000,707 Lead Ct,Hub City,OH,43015
+1011,Karen,Lopez,karen.lopez@example.com,555-555-1111,1975-12-12,2011-07-07,2025-07-07,Checking,300,5000,Declined,-500,808 Tin Pl,Jump City,TX,77001
+1012,Liam,Miller,liam.m@domain.com,555-222-3333,1992-02-02,2017-08-08,2025-08-08,Savings,670,0,Approved,15000,909 Zinc Rd,Fairfax,VA,22030
+1013,Mia,Ngyuen,mia.n@test.com,555-444-5555,1983-01-23,2014-02-14,2025-08-15,Loan,630,12000,Approved,8000,1010 Iron St,Ivy Town,CT,06830
+1003,Charlie,Brown,charlie.brown@invalid,1234567,1970-01-01,2005-06-01,2025-08-01,Loan,450,25000,Approved,500,789 Pine Rd,Capital City,NY,12201
+1014,Nora,Olson,nora.o@gmail.com,,1998-04-01,2020-01-01,2025-07-20,Checking,750,8000,Approved,10000,222 Cedar St,Smallville,KS,67001
+1015,Olivia,Perez,olivia.perez@example.com,555-666-7777,1987-03-10,2013-05-01,2025-08-28,Current,690,9000,Approved,6000,333 Elm St,Gotham,NJ,07001
+1016,Peter,Quinn,peter.quinn@example.com,555-123-4567,1985-05-15,2010-01-20,2025-08-20,Checking,720,15000,Approved,12500,123 Main St,Springfield,IL,62704

@@ -1,0 +1,59 @@
+# rules.yaml
+defaults:
+  mostly: 0.98
+  max_string_len: 256
+  numeric_nonnegative: false
+
+columns:
+  # Domain-agnostic column templates (pattern or exact name)
+  - match: exact
+    name: Email|email|user_email
+    expectations:
+      - type: regex
+        pattern: "^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$"
+  - match: exact
+    name: Phone|phone|mobile|contact
+    expectations:
+      - type: regex
+        pattern: "^[\\d\\-\\+\\s\\(\\)ext\\.]{7,}$"
+
+domain_packs:
+  # Optional domain-specific suites
+  customer:
+    columns:
+      - name: CustomerID
+        expectations:
+          - type: not_null
+          - type: unique
+      - name: Age
+        expectations:
+          - type: between
+            min: 18
+            max: 100
+
+  credit_card:
+    columns:
+      - name: PAN|CardNumber
+        expectations:
+          - type: regex
+            pattern: "^[0-9]{13,19}$"
+      - name: ExpiryDate
+        expectations:
+          - type: date_parseable
+          - type: not_in_future: false   # allow future (cards can be valid future)
+      - name: CVV
+        expectations:
+          - type: regex
+            pattern: "^[0-9]{3,4}$"
+
+  loan:
+    columns:
+      - name: Principal|LoanAmount
+        expectations:
+          - type: ge_between
+            min: 0
+      - name: InterestRate
+        expectations:
+          - type: between
+            min: 0
+            max: 100

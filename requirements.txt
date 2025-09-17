@@ -1,0 +1,5 @@
+streamlit>=1.36
+pandas>=2.1
+numpy>=1.26
+great_expectations>=0.17,<0.19
+matplotlib>=3.7
