@@ -3,3 +3,7 @@ pandas>=2.1
 numpy>=1.26
 great_expectations>=0.17,<0.19
 matplotlib>=3.7
+sqlalchemy
+psycopg2-binary
+networkx
+pyvis
