@@ -1,0 +1,32 @@
+{
+  "lineage_jobs": [
+    {
+      "id": "customer_data_flow_v1",
+      "description": "Primary customer data flow from staging to reporting. 'fax_customer' is an added column. 'temp_notes' is intentionally not propagated.",
+      "source_table": "customer_abc",
+      "target_table": "customer_bcd",
+      "expected_extras": ["fax_customer", "etl_load_timestamp"],
+      "ignored_source_columns": ["temp_notes", "audit_log_id"],
+      "column_mappings": {
+        "customer_id": "customer_identifier",
+        "first_name": "first_name",
+        "last_name": "last_name",
+        "email": "email_address",
+        "phone": "contact_phone"
+      }
+    },
+    {
+      "id": "product_snapshot_pipeline",
+      "description": "Pipeline for daily product snapshots, adding a 'snapshot_date' column.",
+      "source_table": "products_raw",
+      "target_table": "products_daily_snapshot",
+      "expected_extras": ["snapshot_date"],
+      "ignored_source_columns": ["legacy_id"],
+      "column_mappings": {
+        "product_code": "product_code",
+        "description": "product_description",
+        "price_usd": "unit_price_usd"
+      }
+    }
+  ]
+}

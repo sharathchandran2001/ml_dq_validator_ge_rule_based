@@ -1,0 +1,20 @@
+{
+  "lineage": [
+    {
+      "description": "MNE Customer data flow from staging to reporting table. 'fax_number' is an added column.",
+      "source_MNE": "ABC",
+      "source_table": "customer_abc",
+      "target_MNE": "BCD",
+      "target_table": "customer_bcd",
+      "expected_extras": ["fax_customer"],
+      "column_mappings": {
+        "id": "id",
+        "first_name": "first_name",
+        "last_name": "last_name",
+        "email": "email",
+        "phone": "phone_number",
+        "dob": "date_of_birth"
+      }
+    }
+  ]
+}

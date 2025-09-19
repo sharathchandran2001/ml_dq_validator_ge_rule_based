@@ -1,0 +1,17 @@
+{
+  "lineage": [
+    {
+      "source_table": "customer_abc",
+      "target_table": "customer_bcd",
+      "expected_extras": ["fax_customer"],
+      "column_mappings": {
+        "id": "id",
+        "first_name": "first_name",
+        "last_name": "last_name",
+        "email": "email",
+        "phone": "phone_number",
+        "dob": "date_of_birth"
+      }
+    }
+  ]
+}

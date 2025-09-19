@@ -1,0 +1,10 @@
+{
+  "mappings": [
+    {"source": "customer_abc.customer_id", "target": "customer_bcd.customer_id"},
+    {"source": "customer_abc.first_name", "target": "customer_bcd.first_name"},
+    {"source": "customer_abc.last_name", "target": "customer_bcd.last_name"},
+    {"source": "customer_abc.dob", "target": "customer_bcd.dob"},
+    {"source": "customer_abc.phone_number", "target": "customer_bcd.phone_number"},
+    {"source": "customer_abc.fax_number", "target": "customer_bcd.fax_number"}
+  ]
+}
