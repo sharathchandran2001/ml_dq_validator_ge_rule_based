@@ -1,0 +1,254 @@
+1. Executive Summary
+​The goal of this framework is to provide a "database-agnostic" processing engine. By decoupling the data ingestion logic from the core transformation rules, the system can seamlessly switch between file systems (Parquet, CSV), relational databases (MS SQL, PostgreSQL), and cloud storage without re-engineering the core logic.
+​2. System Components
+​2.1 Configuration & UI Layer
+​The entry point for the framework is a configuration-driven UI (e.g., Next.js).
+​Source Registration: Users define connection strings, credential references (pointers to Key Vault), and source types.
+​Job Metadata: The UI captures the mapping between source and target systems.
+​Validation Rules: Users select data quality assertions (via Great Expectations) to be applied during the run.
+​2.2 Service Layer (FastAPI)
+​The FastAPI application acts as the orchestrator, hosted within Azure Kubernetes Service (AKS).
+​Request Handling: Receives job triggers from the UI, Postman, or upstream frameworks.
+​Job Dispatcher: Generates a Unique Transaction ID for every request and submits the job to the PySpark cluster.
+​State Management: Communicates with an MS SQL database to log the initial "Pending" state and subsequent updates.
+​2.3 Processing Engine (PySpark)
+​The heavy lifting is performed by PySpark instances running in a containerized environment.
+​Abstraction Layer (The Adapter Pattern): * The engine uses a factory pattern to instantiate the correct DataReader.
+​For databases, it utilizes standard JDBC drivers.
+​For file systems, it utilizes native Spark readers (e.g., spark.read.parquet).
+​Data Quality (Great Expectations): The Spark DataFrame is passed into a Great Expectations "Checkpoint." This standardizes the validation output into a common JSON format regardless of the data source.
+​3. Data Flow & Abstraction Logic
+​The system follows a Connect → Validate → Transform → Load pattern:
+​Detection via Config: Instead of dynamic scanning (which can be error-prone), the framework reads the user-provided source_type from the metadata.
+​Standardized Schema: Regardless of the source (SQL table vs. Parquet file), the data is loaded into a Spark DataFrame, which acts as the "Universal Representation."
+​Transformation: Logic is applied to the DataFrame. Since the DataFrame schema is consistent, the transformation logic remains "unaware" of the original source format.
+​4. Security & Infrastructure
+​4.1 Authentication
+​Azure App Registrations: All API endpoints are secured via Azure AD (Entra ID).
+​Service-to-Service: The FastAPI layer uses Managed Identities to interact with other Azure resources, eliminating the need for hardcoded secrets.
+​4.2 Credential Management
+​Azure Key Vault: Sensitive connection strings and DB passwords provided by the user are stored in Key Vault. The PySpark jobs retrieve these at runtime using the Transaction ID as a reference.
+​4.3 Database Tracking
+​MS SQL: A centralized Microsoft SQL database tracks every transaction.
+​Schema: TransactionID | UserID | SourceType | StartTime | EndTime | Status | LogLink
+​5. Scalability & Resilience
+​5.1 Horizontal Scaling
+​AKS Autoscaling: The FastAPI service layer scales based on CPU/Memory pressure.
+​Spark on Kubernetes: PySpark executors are dynamically spun up or down based on the size of the dataset being processed, ensuring cost-efficiency.
+​5.2 Fault Tolerance
+​Job Polling & Callbacks: If a Spark container fails, the FastAPI "Watcher" service detects the timeout and updates the MS SQL status to "Failed," triggering an automated retry if configured.
+​Error Handling: Every adapter includes specific try-catch blocks for connectivity issues (e.g., DB timeouts vs. Missing File errors), ensuring the logs provide actionable feedback.
+​Next Steps
+​Would you like me to draft the Python class structure for the "Adapter Factory" that will handle these different source types?
+
+Python Implementation: Adapter Factory Pattern
+​To make the framework truly generic, we use the Factory Pattern combined with Abstract Base Classes (ABC). This ensures that every new data source added to the system follows the same contract, making the core processing logic "source-agnostic."
+​1. The Abstract Base Class
+​This defines the "contract." Any new source (SQL, S3, Parquet) must implement these methods.
+
+  from abc import ABC, abstractmethod
+from pyspark.sql import SparkSession, DataFrame
+
+class DataReader(ABC):
+    """Abstract Base Class for all data source adapters."""
+    
+    def __init__(self, spark: SparkSession, config: dict):
+        self.spark = spark
+    2. Concrete Adapters
+​These classes handle the specific logic for different source types.
+​JDBC Adapter (For MS SQL, PostgreSQL, etc.)
+          
+          
+          self.config = config
+
+    @abstractmethod
+    def read(self) -> DataFrame:
+        """Main method to ingest data into a Spark DataFrame."""
+        pass
+
+
+
+  class JDBCReader(DataReader):
+    def read(self) -> DataFrame:
+        # Securely pulling connection details from config (sourced from Key Vault)
+        return self.spark.read \
+          .format("jdbc") \
+            .option("url", self.config['connection_url']) \
+            .option("dbtable", self.config['table_name']) \
+            .option("user", self.config['username']) \
+            .option("password", self.config['password']) \
+            .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
+            .load()
+
+
+
+          Parquet Adapter (For File Systems/OneLake)
+
+         class ParquetReader(DataReader):
+    def read(self) -> DataFrame:
+        return self.spark.read.parquet(self.config['file_path'])
+
+3. The Adapter Factory
+​This is the "Brain" of the abstraction layer. It detects the source_type from the configuration and returns the appropriate instance.
+
+          class DataSourceFactory:
+    """Factory to instantiate the correct DataReader."""
+    
+    _registry = {
+        "mssql": JDBCReader,
+        "parquet": ParquetReader,
+        # "csv": CSVReader, (future expansion)
+    }
+
+    @staticmethod
+    def get_reader(spark: SparkSession, source_config: dict) -> DataReader:
+        source_type = source_config.get("source_type").lower()
+        reader_class = DataSourceFactory._registry.get(source_type)
+        
+        if not reader_class:
+            raise ValueError(f"Unsupported source type: {source_type}")
+            
+        return reader_class(spark, source_config)
+
+
+4. Framework Orchestration (The "Universal" Logic)
+​This is how your FastAPI service or PySpark job would use the factory. Notice how the validation logic doesn't care where the data came from.
+
+
+          def run_validation_job(spark: SparkSession, job_config: dict):
+    # 1. Get the appropriate reader via the Factory
+    reader = DataSourceFactory.get_reader(spark, job_config['source'])
+    
+    # 2. Load data into a 'Universal' DataFrame
+    df = reader.read()
+    
+    # 3. Apply Great Expectations or Spark transformations
+    # The logic here remains identical whether it's MS SQL or a Parquet file
+    print(f"Processing {df.count()} rows from {job_config['source']['source_type']}...")
+    
+    # Example: df.validate_with_ge(job_config['rules'])
+    return df
+
+
+      Key Benefits of this Structure
+​Scalability: To support a new database (like Snowflake or MongoDB), you only need to write one new Reader class and register it in the factory.
+​Maintainability: If the MS SQL driver changes, you only update the JDBCReader, leaving the rest of the framework untouched.
+​Security: Credentials are passed into the config dictionary at runtime, keeping the adapter logic clean of hardcoded secrets.
+
+
+  =====
+
+
+  The Great Expectations Integration Workflow
+​Integrating GX involves converting your Spark DataFrame into a Batch Request, which is then processed by a Checkpoint. A Checkpoint is essentially a production-ready "test run" that combines a dataset, an Expectation Suite (your rules), and an Action List (where the results go).
+​Updated Orchestration Logic
+​Here is how you would modify the run_validation_job to include the GX validation step. This assumes you have an Expectation Suite already defined (e.g., "bronze_data_quality").
+
+
+  Why This Works for Your Architecture
+​Decoupled Logic: The JDBCReader or ParquetReader handles the "How to get data," while Great Expectations handles the "Is the data good?" Neither needs to know about the other.
+​Uniform Reporting: Regardless of whether the source was a SQL table or a file, GX produces a standardized Validation Result object. This makes it easy to build a consistent "Data Quality Dashboard" in your UI.
+​In-Memory Processing: Since we are passing the df directly as a batch_data parameter, the data never touches the disk between reading and validating. This is crucial for performance in a distributed Spark environment.
+​Handling the Results
+​The checkpoint_result object contains a wealth of metadata, including which specific rows failed and which expectations were unmet.
+
+  Handling the Results
+​The checkpoint_result object contains a wealth of metadata, including which specific rows failed and which expectations were unmet.
+
+
+  Parsing the Great Expectations (GX) results is the final step in closing the loop. You’ll want to extract high-level statistics (success rate, total rows) and detailed failure metadata to store in your MS SQL tracking table.
+​This ensures that your UI can show a "Health Score" for every transaction without the user needing to dig through raw JSON logs.
+​1. Extracting Key Metrics from the Checkpoint
+​The checkpoint_result is a nested object. We’ll pull out the success boolean and the statistics block.
+
+def parse_gx_results(checkpoint_result):
+    """Extracts summary metrics from the GX result object."""
+    # GX can run multiple suites; we'll aggregate them or take the first
+    run_results = checkpoint_result.run_results
+    
+    summary = {
+        "success": checkpoint_result.success,
+        "total_expectations": 0,
+        "successful_expectations": 0,
+        "failed_expectations": 0,
+        "success_percent": 0.0
+    }
+
+    for result in run_results.values():
+        stats = result["validation_result"]["statistics"]
+        summary["total_expectations"] += stats["evaluated_expectations"]
+        summary["successful_expectations"] += stats["successful_expectations"]
+        summary["failed_expectations"] += stats["unsuccessful_expectations"]
+
+    if summary["total_expectations"] > 0:
+        summary["success_percent"] = (summary["successful_expectations"] / summary["total_expectations"]) * 100
+
+    return summary
+
+
+      
+  2. Updating the MS SQL Transaction Table
+​Since your processing happens in PySpark, you can write the status back to MS SQL using the standard JDBC connector. This ensures the database is updated the moment the job finishes.
+
+      
+          from datetime import datetime
+
+def update_transaction_status(spark, transaction_id, summary, status="Completed"):
+    """Writes the final validation summary back to the MS SQL tracking table."""
+    
+    # Create a small DataFrame with the update info
+    update_data = [{
+        "TransactionID": transaction_id,
+        "Status": "Failed" if not summary["success"] else status,
+        "EndTime": datetime.now(),
+        "SuccessPercent": summary["success_percent"],
+        "FailedCount": summary["failed_expectations"],
+        "TotalCount": summary["total_expectations"]
+    }]
+    
+    update_df = spark.createDataFrame(update_data)
+
+    # Use 'append' or 'overwrite' logic depending on your DB schema design
+    # Usually, we 'Append' to a logging table or use a MERGE/UPSERT pattern
+    update_df.write \
+        .format("jdbc") \
+        .option("url", "jdbc:sqlserver://<server>:<port>;databaseName=<db>") \
+        .option("dbtable", "ValidationLogs") \
+        .option("user", "<user>") \
+        .option("password", "<pw>") \
+        .mode("append") \
+        .save()
+
+
+
+      
+3. Handling the "Detailed Failure" Logs
+​While the database holds the summary, the full validation report (the "Data Doc") is often too large for a SQL cell.
+​Best Practice: Save the full GX JSON to Azure Blob Storage.
+​Link it: Store the URL to that JSON file in the LogLink column of your MS SQL table. Your UI can then fetch that JSON and render it beautifully for the user when they click "View Details."
+
+
+  
+==========
+
+  
+
+Summary of the Orchestration Flow
+​FastAPI receives a request and creates a Pending record in MS SQL.
+​PySpark loads data from the Adapter Factory.
+​GX runs validations on the DataFrame.
+​The Parser calculates the pass/fail percentages.
+​The Writer updates the MS SQL record with the final SuccessPercent and Status.
+          
+
+
+  4. The UI Interaction Flow
+​UI calls POST /validate.
+​FastAPI returns {"transaction_id": "123-abc"}.
+​UI begins polling a second endpoint, e.g., GET /status/123-abc, every few seconds.
+​FastAPI reads the MS SQL table and returns the current status (Pending -> Processing -> Completed).
+
+
+  
+
+  
