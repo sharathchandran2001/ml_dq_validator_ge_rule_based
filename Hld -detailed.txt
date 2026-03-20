@@ -1,0 +1,25 @@
+High-Level Architecture Map
+​1. The HLD Breakdown
+​A. Interaction Layer (Client Side)
+​Web UI / Postman / External Frameworks: These are the triggers. They send a JSON payload containing the source_type (e.g., MS SQL or Parquet), the connection metadata, and the specific validation rules to run.
+​Azure Entra ID (Authentication): Before the request hits the API, it must carry a valid Bearer Token from an Azure App Registration.
+​B. Orchestration Layer (FastAPI on AKS)
+​FastAPI Endpoint: Receives the request, generates a Transaction ID, and immediately writes a PENDING status to the MS SQL database.
+​Background Worker: Uses FastAPI’s background tasks to trigger the PySpark job so the user doesn't have to wait for the data processing to finish.
+​Azure Key Vault: The orchestrator fetches sensitive DB credentials or service principal keys here, ensuring no secrets are hardcoded in your Python scripts.
+​C. Processing Layer (PySpark on AKS)
+​Adapter Factory: This is the Python logic we discussed. It dynamically chooses the right "Reader" (JDBC for MS SQL or Native for Parquet).
+​Universal DataFrame: All data, regardless of source, is loaded into a Spark DataFrame.
+​Great Expectations (GX) Engine: The DataFrame is passed through the GX Checkpoint. This is where your "Data Quality" rules are applied in a distributed manner across Spark executors.
+​D. Persistence & Logging Layer
+​MS SQL Database: This is your "Source of Truth" for operations. It stores the Transaction ID, the status, the success/failure counts, and the start/end times.
+​Azure Blob Storage (Optional but Recommended): While MS SQL stores the summary, the massive JSON "Validation Result" from GX is saved here as a flat file, with a link stored in the SQL table for the UI to fetch.
+​2. The Transaction Lifecycle (Logic Flow)
+​Request Phase: UI \rightarrow FastAPI (Auth Check).
+​Initialization Phase: FastAPI \rightarrow Insert Transaction(ID, Status='Pending') into MS SQL.
+​Processing Phase: FastAPI \rightarrow PySpark (Read from Source \rightarrow Validate with GX).
+​Completion Phase: PySpark \rightarrow Update Transaction(ID, Status='Completed', Metrics=...) in MS SQL.
+​Polling Phase: UI \rightarrow FastAPI \rightarrow Read MS SQL (Update UI with "Success" or "Failure").
+​3. Resilience & Scalability Features
+​Isolation: If one PySpark job fails due to bad data, the FastAPI service stays up and the MS SQL record simply marks that specific Transaction ID as Failed.
+​Elasticity: Because this is on AKS, you can set horizontal pod autoscalers to spin up more Spark executors if you are processing millions of rows from your MS SQL source.
